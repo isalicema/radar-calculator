@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Capability Evaluator — Bauhaus Edition</title>
+    <meta name="description" content="基于加权总分与雷达面积的双评估体系，对比团队战力">
+    <!-- Open Graph / Social Media -->
+    <meta property="og:title" content="中国好团队六边形战力演算器">
+    <meta property="og:description" content="基于加权总分与雷达面积的双评估体系，对比团队战力">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://isalicema.github.io/radar-calculator/">
+    <meta property="og:site_name" content="Radar Calculator">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:locale:alternate" content="en_US">
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="中国好团队六边形战力演算器">
+    <meta name="twitter:description" content="基于加权总分与雷达面积的双评估体系，对比团队战力">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bauhaus-red: #E94B3C;
+            --bauhaus-blue: #0047AB;
+            --bauhaus-yellow: #F2C94C;
+            --bauhaus-green: #2ECC71;
+            --bauhaus-black: #1A1A1A;
+            --bauhaus-gray: #E8E8E8;
+            --bauhaus-white: #FFFFFF;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bauhaus-white);
+            color: var(--bauhaus-black);
+            line-height: 1.6;
+        }
+
+        /* 几何装饰背景 */
+        .geo-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .geo-bg::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 400px;
+            height: 400px;
+            background: var(--bauhaus-yellow);
+            opacity: 0.15;
+            transform: rotate(45deg);
+        }
+        .geo-bg::after {
+            content: '';
+            position: absolute;
+            bottom: -150px;
+            left: -100px;
+            width: 500px;
+            height: 300px;
+            background: var(--bauhaus-blue);
+            opacity: 0.08;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 40px 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 头部 - 包豪斯风格 */
+        header {
+            border-left: 8px solid var(--bauhaus-red);
+            padding-left: 30px;
+            margin-bottom: 50px;
+        }
+        h1 {
+            font-size: 42px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            font-size: 16px;
+            color: #666;
+            font-weight: 400;
+        }
+
+        /* 公式区域 - 网格卡片 */
+        .formulas-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2px;
+            background: var(--bauhaus-black);
+            margin-bottom: 50px;
+        }
+        .formula-card {
+            background: var(--bauhaus-white);
+            padding: 30px;
+            position: relative;
+        }
+        .formula-card:first-child::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 60px;
+            height: 60px;
+            background: var(--bauhaus-yellow);
+            clip-path: polygon(100% 0, 0 100%, 100% 100%);
+        }
+        .formula-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            color: var(--bauhaus-black);
+        }
+        .formula-math {
+            font-family: 'Times New Roman', serif;
+            font-size: 20px;
+            font-style: italic;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: var(--bauhaus-gray);
+            border-left: 4px solid var(--bauhaus-blue);
+        }
+        .weight-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        .weight-tag {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 6px 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .tag-s { background: var(--bauhaus-red); color: white; }
+        .tag-a { background: var(--bauhaus-yellow); color: var(--bauhaus-black); }
+        .tag-b { background: var(--bauhaus-gray); color: var(--bauhaus-black); border: 2px solid var(--bauhaus-black); }
+
+        /* 团队卡片 - 包豪斯风格 */
+        .teams-section {
+            margin-bottom: 60px;
+        }
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid var(--bauhaus-black);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .section-title::before {
+            content: '';
+            width: 20px;
+            height: 20px;
+            background: var(--bauhaus-red);
+        }
+
+        .teams-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+        }
+
+        .team-card {
+            background: var(--bauhaus-white);
+            border: 3px solid var(--bauhaus-black);
+            box-shadow: 8px 8px 0 var(--bauhaus-gray);
+            position: relative;
+            overflow: hidden;
+        }
+        .team-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 80px;
+            height: 80px;
+            background: var(--bauhaus-yellow);
+            clip-path: polygon(100% 0, 0 0, 100% 100%);
+        }
+        .team-card.winner-weighted {
+            border-color: var(--bauhaus-red);
+            box-shadow: 8px 8px 0 var(--bauhaus-red);
+        }
+        .team-card.winner-area {
+            border-color: var(--bauhaus-blue);
+            box-shadow: 8px 8px 0 var(--bauhaus-blue);
+        }
+        .team-card.winner-both {
+            border-color: var(--bauhaus-red);
+            box-shadow: 8px 8px 0 var(--bauhaus-yellow);
+        }
+
+        .team-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 25px;
+            background: var(--bauhaus-black);
+            color: white;
+            position: relative;
+            min-height: 64px;
+        }
+        .team-badges {
+            display: flex;
+            gap: 8px;
+            min-height: 24px;
+        }
+        .team-name-input {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .team-name-input:focus {
+            outline: none;
+            border-bottom: 2px solid var(--bauhaus-yellow);
+        }
+        .team-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 4px 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .badge-red { background: var(--bauhaus-red); }
+        .badge-blue { background: var(--bauhaus-blue); }
+        .badge-yellow { background: var(--bauhaus-yellow); color: var(--bauhaus-black); }
+        .badge-gray { background: var(--bauhaus-green); color: white; }
+
+        .chart-wrapper {
+            padding: 25px;
+            height: 420px;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            border-top: 3px solid var(--bauhaus-black);
+        }
+        .stat-box {
+            padding: 15px 8px;
+            text-align: center;
+            border-right: 2px solid var(--bauhaus-black);
+            min-width: 0;
+        }
+        .stat-box:last-child {
+            border-right: none;
+        }
+        .stat-label {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #666;
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .stat-value {
+            font-size: 25px;
+            font-weight: 700;
+            color: var(--bauhaus-black);
+            white-space: nowrap;
+        }
+        .stat-box.highlight-red .stat-value { color: var(--bauhaus-red); }
+        .stat-box.highlight-blue .stat-value { color: var(--bauhaus-blue); }
+        .stat-box.highlight-yellow .stat-value { color: var(--bauhaus-yellow); }
+        .stat-box.highlight-gray .stat-value { color: var(--bauhaus-green); }
+
+        .dimensions-panel {
+            padding: 20px 25px;
+            background: var(--bauhaus-gray);
+        }
+        .dim-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px 15px;
+        }
+        .dim-cell {
+            display: grid;
+            grid-template-columns: 1fr 24px 80px;
+            align-items: center;
+            gap: 6px;
+        }
+        .dim-label {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .weight-indicator {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            width: 24px;
+            text-align: center;
+        }
+        .dim-input {
+            width: 80px;
+            padding: 10px 4px;
+            border: 2px solid var(--bauhaus-black);
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            background: white;
+        }
+        .dim-input:focus {
+            outline: none;
+            background: var(--bauhaus-yellow);
+        }
+
+        .team-actions {
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 2px solid var(--bauhaus-black);
+        }
+        .extremes {
+            font-size: 12px;
+        }
+        .extreme-best { color: var(--bauhaus-blue); font-weight: 600; }
+        .extreme-worst { color: var(--bauhaus-red); font-weight: 600; }
+        .delete-btn {
+            background: transparent;
+            border: 2px solid var(--bauhaus-red);
+            color: var(--bauhaus-red);
+            padding: 8px 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .delete-btn:hover {
+            background: var(--bauhaus-red);
+            color: white;
+        }
+
+        /* 对比区域 */
+        .comparison-section {
+            border: 3px solid var(--bauhaus-black);
+            background: var(--bauhaus-white);
+        }
+        .comparison-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px 30px;
+            background: var(--bauhaus-black);
+            color: white;
+        }
+        .comparison-title {
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .comparison-title::before {
+            content: '';
+            width: 15px;
+            height: 15px;
+            background: var(--bauhaus-yellow);
+        }
+        .add-btn {
+            background: var(--bauhaus-yellow);
+            color: var(--bauhaus-black);
+            border: none;
+            padding: 12px 25px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .add-btn:hover {
+            background: var(--bauhaus-red);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* 对比表格 */
+        .comparison-table-wrapper {
+            padding: 30px;
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .comparison-table th {
+            background: var(--bauhaus-black);
+            color: white;
+            padding: 18px 15px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+        }
+        .comparison-table td {
+            padding: 20px 15px;
+            text-align: center;
+            border-bottom: 2px solid var(--bauhaus-gray);
+            font-size: 14px;
+        }
+        .comparison-table tr:hover td {
+            background: var(--bauhaus-gray);
+        }
+        .cell-team {
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: left !important;
+            padding-left: 25px !important;
+        }
+        .score-big {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .winner-cell-red {
+            background: var(--bauhaus-red) !important;
+            color: white !important;
+        }
+        .winner-cell-blue {
+            background: var(--bauhaus-blue) !important;
+            color: white !important;
+        }
+        .winner-cell-green {
+            background: var(--bauhaus-green) !important;
+            color: white !important;
+        }
+        .winner-cell-yellow {
+            background: var(--bauhaus-yellow) !important;
+            color: var(--bauhaus-black) !important;
+        }
+        .rank-pill {
+            display: inline-block;
+            padding: 4px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-left: 10px;
+        }
+        .rank-1 { background: var(--bauhaus-yellow); color: var(--bauhaus-black); }
+        .rank-2 { background: var(--bauhaus-gray); color: var(--bauhaus-black); border: 2px solid var(--bauhaus-black); }
+        .rank-3 { background: var(--bauhaus-black); color: white; }
+
+        /* 对比图表 */
+        .comparison-chart-wrapper {
+            padding: 30px;
+            height: 600px;
+            border-top: 3px solid var(--bauhaus-black);
+            margin-top: 10px;
+        }
+
+        /* 几何装饰 */
+        .geo-circle {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--bauhaus-black);
+            border-radius: 50%;
+            top: 20px;
+            right: 100px;
+        }
+        .geo-line {
+            position: absolute;
+            width: 60px;
+            height: 3px;
+            background: var(--bauhaus-black);
+            bottom: 30px;
+            left: 30px;
+        }
+
+        /* 语言切换 */
+        .lang-switch {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background: var(--bauhaus-black);
+            color: white;
+            padding: 12px 24px;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            z-index: 100;
+            border: 3px solid var(--bauhaus-black);
+            transition: all 0.2s;
+        }
+        .lang-switch:hover {
+            background: var(--bauhaus-yellow);
+            color: var(--bauhaus-black);
+        }
+
+        @media (max-width: 900px) {
+            .formulas-grid { grid-template-columns: 1fr; }
+            .teams-grid { grid-template-columns: 1fr; }
+            h1 { font-size: 28px; }
+            .stats-bar { grid-template-columns: 1fr; }
+            .stat-box { border-right: none; border-bottom: 2px solid var(--bauhaus-black); }
+        }
+        @media (max-width: 480px) {
+            .teams-grid { grid-template-columns: 1fr; min-width: auto; }
+            .dim-row { grid-template-columns: 1fr; }
+            .team-card { min-width: auto; }
+        }
+    </style>
+</head>
+<body>
+    <div class="geo-bg"></div>
+
+    <div class="container">
+        <div class="lang-switch" onclick="toggleLanguage()">
+            <span id="langBtn">中文</span>
+        </div>
+
+        <header>
+            <h1 data-i18n="title">Team Capability<br>Evaluator</h1>
+            <p class="subtitle" data-i18n="subtitle">Weighted Score vs. Radar Area — Bauhaus Edition</p>
+        </header>
+
+        <!-- Formula Section -->
+        <div class="formulas-grid">
+            <div class="formula-card">
+                <div class="formula-title" data-i18n="weightedTitle">Weighted Score Method</div>
+                <div class="formula-math">S<sub>total</sub> = Σ(Score<sub>i</sub> × W<sub>i</sub>) ÷ 9.0</div>
+                <div style="font-size: 13px; color: #555;" data-i18n="weightedDesc">
+                    Prioritizes high-weight dimensions. Favors teams with strong Tech & Innovation.
+                </div>
+                <div class="weight-tags">
+                    <span class="weight-tag tag-s" data-i18n="sTech">S: Tech 2.0</span>
+                    <span class="weight-tag tag-s" data-i18n="sInnovation">S: Innovation 2.0</span>
+                    <span class="weight-tag tag-a" data-i18n="aTeam">A: Team 1.5</span>
+                    <span class="weight-tag tag-a" data-i18n="aAmbition">A: Ambition 1.5</span>
+                    <span class="weight-tag tag-b" data-i18n="bMarket">B: Market 1.0</span>
+                    <span class="weight-tag tag-b" data-i18n="bCommercial">B: Commercial 1.0</span>
+                </div>
+            </div>
+            <div class="formula-card">
+                <div class="formula-title" data-i18n="areaTitle">Radar Area Method</div>
+                <div class="formula-math">A = ½ × Σ(x<sub>i</sub>y<sub>i+1</sub> − x<sub>i+1</sub>y<sub>i</sub>)</div>
+                <div style="font-size: 13px; color: #555;" data-i18n="areaDesc">
+                    Measures polygon area via shoelace formula. Rewards balanced capability profiles.
+                </div>
+                <div style="margin-top: 20px; padding: 15px; background: var(--bauhaus-yellow); border: 2px solid var(--bauhaus-black);">
+                    <strong data-i18n="insightLabel">Key Insight:</strong> <span data-i18n="insightText">Four dimensions reveal different team strengths: Weighted Score (strategic focus) | Radar Area (overall coverage) | Average Score (general capability) | Balance (consistency across dimensions).</span>
+                </div>
+                <div style="margin-top: 15px; padding: 12px; background: var(--bauhaus-gray); border: 2px solid var(--bauhaus-black); font-size: 12px;">
+                    <div data-i18n="balanceNote">📊 Balance Score: Converted from standard deviation to 0-100% scale. Higher = more balanced across all dimensions.</div>
+                    <div style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.5); font-size: 11px; font-family: monospace;" data-i18n="balanceFormula">Balance = (1 - σ/σₘₐₓ) × 100%, where σ = √[Σ(xᵢ - μ)² / n], σₘₐₓ = 50</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Teams Section -->
+        <div class="teams-section">
+            <h2 class="section-title" data-i18n="individualTitle">Individual Team Analysis</h2>
+            <div class="teams-grid" id="teamsContainer"></div>
+        </div>
+
+        <!-- Comparison Section -->
+        <div class="comparison-section">
+            <div class="comparison-header">
+                <h2 class="comparison-title" data-i18n="comparisonTitle">Comparative Analysis</h2>
+                <div style="display: flex; gap: 12px;">
+                    <button class="add-btn" onclick="resetToDefault()" style="background: var(--bauhaus-gray); color: var(--bauhaus-black);" data-i18n="resetBtn">↺ Reset</button>
+                    <button class="add-btn" onclick="addTeam()" data-i18n="addTeamBtn">+ Add Team</button>
+                </div>
+            </div>
+
+            <div class="comparison-table-wrapper">
+                <table class="comparison-table" id="comparisonTable">
+                    <thead>
+                        <tr>
+                            <th data-i18n="thTeam">Team</th>
+                            <th><span data-i18n="thWeighted">Weighted Score</span><br><small data-i18n="thSrank">(S-Rank)</small></th>
+                            <th><span data-i18n="thArea">Radar Area</span><br><small data-i18n="thArank">(A-Rank)</small></th>
+                            <th><span data-i18n="thAverage">Average Score</span><br><small data-i18n="thAvgRank">(Avg-Rank)</small></th>
+                            <th><span data-i18n="thBalance">Balance</span><br><small data-i18n="thBalRank">(Bal-Rank)</small></th>
+                            <th data-i18n="thStrength">Strength</th>
+                            <th data-i18n="thWeakness">Weakness</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comparisonBody"></tbody>
+                </table>
+            </div>
+
+            <div class="comparison-chart-wrapper">
+                <canvas id="comparisonChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 语言配置
+        const translations = {
+            en: {
+                title: 'Team Hexagon<br>Power Calculator',
+                subtitle: 'Four Evaluation Dimensions: Weighted Score | Radar Area | Average Score | Balance',
+                balanceNote: '📊 Balance Score: Converted from standard deviation to 0-100% scale. Higher = more balanced across all dimensions.',
+                balanceFormula: 'Balance = (1 - σ/σₘₐₓ) × 100%, where σ = √[Σ(xᵢ - μ)² / n], σₘₐₓ = 50 (theoretical max std dev)',
+                weightedTitle: 'Weighted Score Method',
+                weightedDesc: 'Prioritizes high-weight dimensions. Favors teams with strong Tech & Innovation.',
+                sTech: 'S: Tech 2.0',
+                sInnovation: 'S: Innovation 2.0',
+                aTeam: 'A: Team 1.5',
+                aAmbition: 'A: Ambition 1.5',
+                bMarket: 'B: Market 1.0',
+                bCommercial: 'B: Commercial 1.0',
+                areaTitle: 'Radar Area Method',
+                areaDesc: 'Measures polygon area via shoelace formula. Rewards balanced capability profiles.',
+                insightLabel: 'Key Insight:',
+                insightText: 'Four dimensions reveal different team strengths: Weighted Score (strategic focus) | Radar Area (overall coverage) | Average Score (general capability) | Balance (consistency across dimensions).',
+                individualTitle: 'Individual Team Analysis',
+                comparisonTitle: 'Comparative Analysis',
+                addTeamBtn: '+ Add Team',
+                thTeam: 'Team',
+                thWeighted: 'Weighted Score',
+                thSrank: '(S-Rank)',
+                thArea: 'Radar Area',
+                thArank: '(A-Rank)',
+                thBalance: 'Balance',
+                thStd: '(0-100% ↑)',
+                thAverage: 'Average Score',
+                thAvgRank: '(Avg-Rank)',
+                thBalRank: '(Bal-Rank)',
+                thStrength: 'Strength',
+                thWeakness: 'Weakness',
+                statWeighted: 'Weighted Score',
+                statArea: 'Radar Area',
+                statBalance: 'Balance',
+                statAverage: 'Average',
+                winnerWeighted: 'WS #1',
+                winnerArea: 'AREA #1',
+                winnerAverage: 'AVG #1',
+                winnerBalance: 'BAL #1',
+                deleteBtn: 'Delete',
+                keepOneTeam: 'At least one team required',
+                resetBtn: 'Reset',
+                resetConfirm: 'Reset to default? All custom teams will be cleared.',
+                dimLabels: ['Innovation', 'Market', 'Team', 'Commercial', 'Tech', 'Ambition']
+            },
+            zh: {
+                title: '中国好团队<br>六边形战力演算器',
+                subtitle: '四维评估体系：加权总分 | 雷达面积 | 平均分 | 均衡度',
+                balanceNote: '📊 均衡度说明：将标准差转换为 0-100% 的均衡度分数。数值越高表示各维度越均衡，100% 为完美均衡。',
+                balanceFormula: '均衡度 = (1 - σ/σₘₐₓ) × 100%，其中 σ = √[Σ(xᵢ - μ)² / n]，σₘₐₓ = 50（理论最大标准差）',
+                weightedTitle: '加权总分计算法',
+                weightedDesc: '优先高权重维度。有利于技术实力和创新性强的团队。',
+                sTech: 'S级: 技术实力 2.0',
+                sInnovation: 'S级: 创新性 2.0',
+                aTeam: 'A级: 团队匹配度 1.5',
+                aAmbition: 'A级: 野心愿景 1.5',
+                bMarket: 'B级: 市场空间 1.0',
+                bCommercial: 'B级: 商业化现状 1.0',
+                areaTitle: '雷达面积计算法',
+                areaDesc: '使用鞋带公式计算多边形面积。奖励能力均衡的团队。',
+                insightLabel: '关键洞察：',
+                insightText: '四个维度揭示团队的不同特质：加权总分（战略重点）| 雷达面积（整体覆盖）| 平均分（综合实力）| 均衡度（各维度一致性）。',
+                individualTitle: '各团队独立分析',
+                comparisonTitle: '团队对比分析',
+                addTeamBtn: '+ 添加团队',
+                thTeam: '团队',
+                thWeighted: '加权总分',
+                thSrank: '(权重排名)',
+                thArea: '雷达面积',
+                thArank: '(面积排名)',
+                thBalance: '均衡度',
+                thStd: '(0-100% ↑)',
+                thAverage: '平均分',
+                thAvgRank: '(平均排名)',
+                thBalRank: '(均衡排名)',
+                thStrength: '最强维度',
+                thWeakness: '最弱维度',
+                statWeighted: '加权总分',
+                statArea: '雷达面积',
+                statBalance: '均衡度',
+                statAverage: '平均分',
+                winnerWeighted: '总分 #1',
+                winnerArea: '面积 #1',
+                winnerAverage: '平均分 #1',
+                winnerBalance: '均衡度 #1',
+                deleteBtn: '删除',
+                keepOneTeam: '至少保留一个团队',
+                resetBtn: '重置',
+                resetConfirm: '确定要重置为默认数据吗？所有自定义团队将被清除。',
+                dimLabels: ['创新性', '市场空间', '团队匹配度', '商业化现状', '技术实力', '野心愿景']
+            }
+        };
+
+        let currentLang = 'zh';
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'zh' : 'en';
+            document.getElementById('langBtn').textContent = currentLang === 'en' ? '中文' : 'EN';
+            updateTranslations();
+            render();
+        }
+
+        function updateTranslations() {
+            const tr = translations[currentLang];
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (tr[key]) {
+                    // 使用 innerHTML 以支持 <br> 等 HTML 标签
+                    el.innerHTML = tr[key];
+                }
+            });
+            // 更新语言按钮文本
+            document.getElementById('langBtn').textContent = currentLang === 'en' ? '中文' : 'EN';
+        }
+
+        function t(key) {
+            return translations[currentLang][key] || key;
+        }
+
+        const dimensions = ['Innovation', 'Market', 'Team', 'Commercial', 'Tech', 'Ambition'];
+        const weights = [2.0, 1.0, 1.5, 1.0, 2.0, 1.5];
+        const totalWeight = 9.0;
+        const weightLabels = {2.0: 'S', 1.5: 'A', 1.0: 'B'};
+
+        const colors = [
+            { name: 'Red', bg: 'rgba(233, 75, 60, 0.15)', border: '#E94B3C', solid: '#E94B3C' },
+            { name: 'Blue', bg: 'rgba(0, 71, 171, 0.15)', border: '#0047AB', solid: '#0047AB' },
+            { name: 'Yellow', bg: 'rgba(242, 201, 76, 0.2)', border: '#D4A017', solid: '#F2C94C' },
+            { name: 'Black', bg: 'rgba(26, 26, 26, 0.1)', border: '#1A1A1A', solid: '#1A1A1A' },
+            { name: 'Green', bg: 'rgba(76, 175, 80, 0.15)', border: '#4CAF50', solid: '#4CAF50' },
+            { name: 'Orange', bg: 'rgba(255, 152, 0, 0.15)', border: '#FF9800', solid: '#FF9800' },
+            { name: 'Purple', bg: 'rgba(156, 39, 176, 0.15)', border: '#9C27B0', solid: '#9C27B0' },
+            { name: 'Cyan', bg: 'rgba(0, 188, 212, 0.15)', border: '#00BCD4', solid: '#00BCD4' },
+            { name: 'Pink', bg: 'rgba(233, 30, 99, 0.15)', border: '#E91E63', solid: '#E91E63' },
+        ];
+
+        // localStorage 缓存键名
+        const STORAGE_KEY = 'radarCalculatorTeams';
+
+        // 从 localStorage 加载数据
+        function loadFromStorage() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    return JSON.parse(saved);
+                }
+            } catch (e) {
+                console.error('Failed to load from localStorage:', e);
+            }
+            return null;
+        }
+
+        // 保存到 localStorage
+        function saveToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(teams));
+            } catch (e) {
+                console.error('Failed to save to localStorage:', e);
+            }
+        }
+
+        // 默认数据
+        const defaultTeams = [
+            { id: 1, name: 'Team A (Mature Giant)', scores: [68.0, 98.5, 86.5, 95.0, 72.5, 84.0] },
+            { id: 2, name: 'Team B (Startup Geek)', scores: [94.5, 75.0, 88.0, 42.5, 96.0, 92.5] }
+        ];
+
+        // 加载数据（优先使用缓存）
+        const savedData = loadFromStorage();
+        let teams = savedData || [...defaultTeams];
+        let nextId = teams.length > 0 ? Math.max(...teams.map(t => t.id)) + 1 : 1;
+        let teamCharts = {};
+        let comparisonChart = null;
+
+        // 初始化：应用当前语言翻译
+        updateTranslations();
+
+        // 重置为默认数据
+        function resetToDefault() {
+            if (confirm(t('resetConfirm'))) {
+                teams = [...defaultTeams];
+                nextId = 3;
+                saveToStorage();
+                render();
+            }
+        }
+
+        const dataLabelsPlugin = {
+            id: 'dataLabels',
+            afterDatasetsDraw(chart) {
+                const { ctx, scales: { r } } = chart;
+                chart.data.datasets.forEach((dataset) => {
+                    const meta = chart.getDatasetMeta(0);
+                    if (meta.hidden) return;
+
+                    ctx.save();
+                    ctx.font = 'bold 13px Inter, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    dataset.data.forEach((value, index) => {
+                        const angle = r.getIndexAngle(index) - Math.PI / 2;
+                        const labelRadius = r.getDistanceFromCenterForValue(value) * 0.65;
+                        const x = r.xCenter + Math.cos(angle) * labelRadius;
+                        const y = r.yCenter + Math.sin(angle) * labelRadius;
+
+                        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                        ctx.beginPath();
+                        ctx.roundRect(x - 16, y - 10, 32, 20, 3);
+                        ctx.fill();
+
+                        ctx.strokeStyle = dataset.borderColor;
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#1A1A1A';
+                        ctx.fillText(value, x, y);
+                    });
+                    ctx.restore();
+                });
+            }
+        };
+
+        function calculateWeightedScore(scores) {
+            const weightedSum = scores.reduce((sum, score, i) => sum + score * weights[i], 0);
+            return weightedSum / totalWeight;
+        }
+
+        function calculateRadarArea(scores) {
+            const n = scores.length;
+            let area = 0;
+            for (let i = 0; i < n; i++) {
+                const j = (i + 1) % n;
+                const angle_i = (2 * Math.PI * i) / n;
+                const angle_j = (2 * Math.PI * j) / n;
+                const xi = scores[i] * Math.cos(angle_i);
+                const yi = scores[i] * Math.sin(angle_i);
+                const xj = scores[j] * Math.cos(angle_j);
+                const yj = scores[j] * Math.sin(angle_j);
+                area += xi * yj - xj * yi;
+            }
+            return Math.abs(area) / 2;
+        }
+
+        function calculateStd(scores) {
+            const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+            const variance = scores.reduce((sum, s) => sum + Math.pow(s - mean, 2), 0) / scores.length;
+            return Math.sqrt(variance);
+        }
+
+        function calculateBalanceScore(scores) {
+            const std = calculateStd(scores);
+            // 理论最大标准差：当所有分数都是0或100时
+            // 对于6个维度，最大标准差约为50（一半0，一半100）
+            const maxStd = 50;
+            // 转换为百分比：标准差越小，均衡度越高
+            const balanceScore = Math.max(0, (1 - std / maxStd) * 100);
+            return balanceScore;
+        }
+
+        function calculateAverageScore(scores) {
+            return scores.reduce((a, b) => a + b, 0) / scores.length;
+        }
+
+        function getBestWorstDimension(scores) {
+            const maxIdx = scores.indexOf(Math.max(...scores));
+            const minIdx = scores.indexOf(Math.min(...scores));
+            return {
+                best: { name: dimensions[maxIdx], score: scores[maxIdx] },
+                worst: { name: dimensions[minIdx], score: scores[minIdx] }
+            };
+        }
+
+        function addTeam() {
+            teams.push({
+                id: nextId++,
+                name: `Team ${String.fromCharCode(64 + teams.length + 1)}`,
+                scores: [80, 80, 80, 80, 80, 80]
+            });
+            render();
+        }
+
+        function removeTeam(id) {
+            if (teams.length <= 1) {
+                alert(t('keepOneTeam'));
+                return;
+            }
+            teams = teams.filter(t => t.id !== id);
+            if (teamCharts[id]) {
+                teamCharts[id].destroy();
+                delete teamCharts[id];
+            }
+            render();
+        }
+
+        function updateTeamName(id, name) {
+            const team = teams.find(t => t.id === id);
+            if (team) team.name = name;
+            updateComparison();
+        }
+
+        function updateScore(id, index, value) {
+            const team = teams.find(t => t.id === id);
+            if (team) {
+                team.scores[index] = parseFloat(value) || 0;
+                render();
+            }
+        }
+
+        function createTeamChart(team, colorIdx) {
+            const ctx = document.getElementById(`chart-${team.id}`).getContext('2d');
+            const safeIdx = colorIdx % colors.length;
+            return new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: t('dimLabels'),
+                    datasets: [{
+                        data: team.scores,
+                        backgroundColor: colors[safeIdx].bg,
+                        borderColor: colors[safeIdx].border,
+                        borderWidth: 3,
+                        pointRadius: 5,
+                        pointBackgroundColor: colors[safeIdx].solid,
+                        pointBorderColor: '#1A1A1A',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: { padding: 30 },
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { display: false },
+                            grid: { color: '#E8E8E8', lineWidth: 2 },
+                            angleLines: { color: '#1A1A1A', lineWidth: 1 },
+                            pointLabels: {
+                                font: { size: 12, family: 'Inter', weight: '700' },
+                                color: '#1A1A1A'
+                            }
+                        }
+                    }
+                },
+                plugins: [dataLabelsPlugin]
+            });
+        }
+
+        function render() {
+            const container = document.getElementById('teamsContainer');
+            container.innerHTML = '';
+
+            const results = teams.map((team, idx) => ({
+                team,
+                idx,
+                weightedScore: calculateWeightedScore(team.scores),
+                radarArea: calculateRadarArea(team.scores),
+                std: calculateStd(team.scores),
+                balanceScore: calculateBalanceScore(team.scores),
+                averageScore: calculateAverageScore(team.scores),
+                ...getBestWorstDimension(team.scores)
+            }));
+
+            const maxWeighted = Math.max(...results.map(r => r.weightedScore));
+            const maxArea = Math.max(...results.map(r => r.radarArea));
+            const maxAverage = Math.max(...results.map(r => r.averageScore));
+            const maxBalance = Math.max(...results.map(r => r.balanceScore));
+
+            results.forEach((r) => {
+                const isWinnerWeighted = r.weightedScore === maxWeighted;
+                const isWinnerArea = r.radarArea === maxArea;
+                const isWinnerAverage = r.averageScore === maxAverage;
+                const isWinnerBalance = r.balanceScore === maxBalance;
+                let winnerClass = '';
+                if (isWinnerWeighted && isWinnerArea) winnerClass = 'winner-both';
+                else if (isWinnerWeighted) winnerClass = 'winner-weighted';
+                else if (isWinnerArea) winnerClass = 'winner-area';
+
+                const card = document.createElement('div');
+                card.className = `team-card ${winnerClass}`;
+                card.innerHTML = `
+                    <div class="team-header">
+                        <input type="text" class="team-name-input" value="${r.team.name}"
+                               onchange="updateTeamName(${r.team.id}, this.value)">
+                        <div class="team-badges">
+                            ${isWinnerWeighted ? `<span class="team-badge badge-red">${t('winnerWeighted')}</span>` : ''}
+                            ${isWinnerArea ? `<span class="team-badge badge-blue">${t('winnerArea')}</span>` : ''}
+                            ${isWinnerAverage ? `<span class="team-badge badge-yellow">${t('winnerAverage')}</span>` : ''}
+                            ${isWinnerBalance ? `<span class="team-badge badge-gray">${t('winnerBalance')}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="chart-${r.team.id}"></canvas>
+                    </div>
+                    <div class="stats-bar">
+                        <div class="stat-box ${isWinnerWeighted ? 'highlight-red' : ''}">
+                            <div class="stat-label">${t('statWeighted')}</div>
+                            <div class="stat-value">${r.weightedScore.toFixed(2)}</div>
+                        </div>
+                        <div class="stat-box ${isWinnerArea ? 'highlight-blue' : ''}">
+                            <div class="stat-label">${t('statArea')}</div>
+                            <div class="stat-value">${Math.round(r.radarArea)}</div>
+                        </div>
+                        <div class="stat-box ${isWinnerAverage ? 'highlight-yellow' : ''}">
+                            <div class="stat-label">${t('statAverage')}</div>
+                            <div class="stat-value">${r.averageScore.toFixed(2)}</div>
+                        </div>
+                        <div class="stat-box ${isWinnerBalance ? 'highlight-gray' : ''}">
+                            <div class="stat-label">${t('statBalance')}</div>
+                            <div class="stat-value">${r.balanceScore.toFixed(1)}%</div>
+                        </div>
+                    </div>
+                    <div class="dimensions-panel">
+                        <div class="dim-grid">
+                            ${dimensions.map((dim, i) => {
+                                const wl = weightLabels[weights[i]];
+                                const wc = wl === 'S' ? 'var(--bauhaus-red)' : wl === 'A' ? 'var(--bauhaus-yellow)' : 'var(--bauhaus-gray)';
+                                return `
+                                <div class="dim-cell">
+                                    <span class="dim-label">${t('dimLabels')[i]}</span>
+                                    <span class="weight-indicator" style="background:${wc};color:${wl==='A'?'#1A1A1A':'white'};border:2px solid #1A1A1A">${wl}</span>
+                                    <input type="number" class="dim-input" min="0" max="100" step="0.5"
+                                           value="${r.team.scores[i]}"
+                                           onchange="updateScore(${r.team.id}, ${i}, this.value)">
+                                </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                    <div class="team-actions">
+                        <div class="extremes">
+                            <span class="extreme-best">↑ ${t('dimLabels')[dimensions.indexOf(r.best.name)]} ${r.best.score}</span>
+                            <span style="margin: 0 10px">|</span>
+                            <span class="extreme-worst">↓ ${t('dimLabels')[dimensions.indexOf(r.worst.name)]} ${r.worst.score}</span>
+                        </div>
+                        <button class="delete-btn" onclick="removeTeam(${r.team.id})">${t('deleteBtn')}</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            setTimeout(() => {
+                teams.forEach((team, idx) => {
+                    if (teamCharts[team.id]) teamCharts[team.id].destroy();
+                    teamCharts[team.id] = createTeamChart(team, idx);
+                });
+            }, 0);
+
+            updateComparison();
+        }
+
+        function updateComparison() {
+            const results = teams.map((team, idx) => ({
+                team,
+                idx,
+                weightedScore: calculateWeightedScore(team.scores),
+                radarArea: calculateRadarArea(team.scores),
+                averageScore: calculateAverageScore(team.scores),
+                balanceScore: calculateBalanceScore(team.scores),
+                ...getBestWorstDimension(team.scores)
+            }));
+
+            const maxWeighted = Math.max(...results.map(r => r.weightedScore));
+            const maxArea = Math.max(...results.map(r => r.radarArea));
+            const maxAverage = Math.max(...results.map(r => r.averageScore));
+            const maxBalance = Math.max(...results.map(r => r.balanceScore));
+
+            const sortedByWeighted = [...results].sort((a, b) => b.weightedScore - a.weightedScore);
+            const sortedByArea = [...results].sort((a, b) => b.radarArea - a.radarArea);
+            const sortedByAverage = [...results].sort((a, b) => b.averageScore - a.averageScore);
+            const sortedByBalance = [...results].sort((a, b) => b.balanceScore - a.balanceScore);
+
+            const getWeightedRank = (id) => sortedByWeighted.findIndex(r => r.team.id === id) + 1;
+            const getAreaRank = (id) => sortedByArea.findIndex(r => r.team.id === id) + 1;
+            const getAverageRank = (id) => sortedByAverage.findIndex(r => r.team.id === id) + 1;
+            const getBalanceRank = (id) => sortedByBalance.findIndex(r => r.team.id === id) + 1;
+
+            const tbody = document.getElementById('comparisonBody');
+            tbody.innerHTML = results.map(r => {
+                const wRank = getWeightedRank(r.team.id);
+                const aRank = getAreaRank(r.team.id);
+                const avgRank = getAverageRank(r.team.id);
+                const balRank = getBalanceRank(r.team.id);
+                return `
+                <tr>
+                    <td class="cell-team" style="color:${colors[r.idx % colors.length].border}">${r.team.name}</td>
+                    <td class="${r.weightedScore === maxWeighted ? 'winner-cell-red' : ''}">
+                        <span class="score-big">${r.weightedScore.toFixed(2)}</span>
+                        <span class="rank-pill rank-${wRank <= 3 ? wRank : ''}">#${wRank}</span>
+                    </td>
+                    <td class="${r.radarArea === maxArea ? 'winner-cell-blue' : ''}">
+                        <span class="score-big">${Math.round(r.radarArea)}</span>
+                        <span class="rank-pill rank-${aRank <= 3 ? aRank : ''}">#${aRank}</span>
+                    </td>
+                    <td class="${r.averageScore === maxAverage ? 'winner-cell-yellow' : ''}">
+                        <span class="score-big">${r.averageScore.toFixed(2)}</span>
+                        <span class="rank-pill rank-${avgRank <= 3 ? avgRank : ''}">#${avgRank}</span>
+                    </td>
+                    <td class="${r.balanceScore === maxBalance ? 'winner-cell-green' : ''}">
+                        <span class="score-big">${r.balanceScore.toFixed(1)}%</span>
+                        <span class="rank-pill rank-${balRank <= 3 ? balRank : ''}">#${balRank}</span>
+                    </td>
+                    <td><strong style="color:var(--bauhaus-blue)">${t('dimLabels')[dimensions.indexOf(r.best.name)]}</strong> ${r.best.score}</td>
+                    <td><strong style="color:var(--bauhaus-red)">${t('dimLabels')[dimensions.indexOf(r.worst.name)]}</strong> ${r.worst.score}</td>
+                </tr>
+                `;
+            }).join('');
+
+            updateComparisonChart(results);
+
+            // 保存数据到 localStorage
+            saveToStorage();
+        }
+
+        function updateComparisonChart(results) {
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
+
+            if (comparisonChart) comparisonChart.destroy();
+
+            comparisonChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: t('dimLabels'),
+                    datasets: results.map(r => ({
+                        label: r.team.name,
+                        data: r.team.scores,
+                        backgroundColor: colors[r.idx % colors.length].bg,
+                        borderColor: colors[r.idx % colors.length].border,
+                        borderWidth: 3,
+                        pointRadius: 6,
+                        pointBackgroundColor: colors[r.idx % colors.length].solid,
+                        pointBorderColor: '#1A1A1A',
+                        pointBorderWidth: 2
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: { padding: { top: 40, bottom: 40, left: 40, right: 40 } },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                padding: 20,
+                                font: { size: 14, family: 'Inter', weight: '600' },
+                                usePointStyle: true,
+                                color: '#1A1A1A'
+                            }
+                        }
+                    },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { stepSize: 20, font: { size: 12 }, color: '#666' },
+                            grid: { color: '#E8E8E8', lineWidth: 2 },
+                            angleLines: { color: '#1A1A1A', lineWidth: 1 },
+                            pointLabels: {
+                                font: { size: 15, family: 'Inter', weight: '700' },
+                                color: '#1A1A1A'
+                            }
+                        }
+                    }
+                },
+                plugins: [dataLabelsPlugin]
+            });
+        }
+
+        render();
+    </script>
+
+    <footer style="text-align:center;padding:40px 20px;color:var(--bauhaus-yellow);font-size:13px;letter-spacing:1px;">
+        © 2026 machiwhale studio. All Rights Reserved.
+    </footer>
+</body>
+</html>
