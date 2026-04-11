@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Team Capability Evaluator — Bauhaus Edition</title>
+    <title>团队六边形战力演算器 — Bauhaus Edition</title>
     <meta name="description" content="基于加权总分、雷达面积、平均分、均衡度的四维评估体系，全面对比团队战力">
     <!-- Open Graph / Social Media -->
-    <meta property="og:title" content="中国好团队六边形战力演算器">
+    <meta property="og:title" content="团队六边形战力演算器">
     <meta property="og:description" content="基于加权总分、雷达面积、平均分、均衡度的四维评估体系，全面对比团队战力">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://isalicema.github.io/radar-calculator/">
@@ -15,7 +15,7 @@
     <meta property="og:locale:alternate" content="en_US">
     <!-- Twitter -->
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="中国好团队六边形战力演算器">
+    <meta name="twitter:title" content="团队六边形战力演算器">
     <meta name="twitter:description" content="基于加权总分、雷达面积、平均分、均衡度的四维评估体系，全面对比团队战力">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -547,6 +547,25 @@
             .dim-row { grid-template-columns: 1fr; }
             .team-card { min-width: auto; }
         }
+
+        /* 三层维度分组 */
+        .tier-header {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 5px 10px;
+            color: white;
+            margin-bottom: 8px;
+            margin-top: 12px;
+        }
+        .tier-header:first-child { margin-top: 0; }
+        .dim-grid-pair {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px 15px;
+            margin-bottom: 4px;
+        }
     </style>
 </head>
 <body>
@@ -571,11 +590,11 @@
                     Prioritizes high-weight dimensions. Favors teams with strong Tech & Innovation.
                 </div>
                 <div class="weight-tags">
-                    <span class="weight-tag tag-s" data-i18n="sTech">S: Tech 2.0</span>
-                    <span class="weight-tag tag-s" data-i18n="sInnovation">S: Innovation 2.0</span>
-                    <span class="weight-tag tag-a" data-i18n="aTeam">A: Team 1.5</span>
-                    <span class="weight-tag tag-a" data-i18n="aAmbition">A: Ambition 1.5</span>
-                    <span class="weight-tag tag-b" data-i18n="bMarket">B: Market 1.0</span>
+                    <span class="weight-tag tag-s" data-i18n="sMarket">S: Market 2.0</span>
+                    <span class="weight-tag tag-s" data-i18n="sTeam">S: Talent 2.0</span>
+                    <span class="weight-tag tag-a" data-i18n="aVision">A: Vision 1.5</span>
+                    <span class="weight-tag tag-a" data-i18n="aInnovation">A: Innovation 1.5</span>
+                    <span class="weight-tag tag-b" data-i18n="bTech">B: Tech 1.0</span>
                     <span class="weight-tag tag-b" data-i18n="bCommercial">B: Commercial 1.0</span>
                 </div>
             </div>
@@ -639,17 +658,17 @@
         const translations = {
             en: {
                 title: 'Team Hexagon<br>Power Calculator',
-                subtitle: 'Four Evaluation Dimensions: Weighted Score | Radar Area | Average Score | Balance',
+                subtitle: 'Four Evaluation Methods: Weighted Score | Radar Area | Average Score | Balance',
                 balanceNote: '📊 Balance Score: Converted from standard deviation to 0-100% scale. Higher = more balanced across all dimensions.',
                 balanceFormula: 'Balance = (1 - σ/σₘₐₓ) × 100%, where σ = √[Σ(xᵢ - μ)² / n], σₘₐₓ = 50 (theoretical max std dev)',
                 weightedTitle: 'Weighted Score Method',
-                weightedDesc: 'Prioritizes high-weight dimensions. Favors teams with strong Tech & Innovation.',
-                sTech: 'S: Tech 2.0',
-                sInnovation: 'S: Innovation 2.0',
-                aTeam: 'A: Team 1.5',
-                aAmbition: 'A: Ambition 1.5',
-                bMarket: 'B: Market 1.0',
-                bCommercial: 'B: Commercial 1.0',
+                weightedDesc: 'Prioritizes high-weight dimensions. Favors teams with strong Team Synergy & Org Resilience.',
+                sMarket: 'S: Team Synergy 2.0',
+                sTeam: 'S: Org Resilience 2.0',
+                aVision: 'A: Tech Moat 1.5',
+                aInnovation: 'A: Execution 1.5',
+                bTech: 'B: Mission & Vision 1.0',
+                bCommercial: 'B: Innovation Foresight 1.0',
                 areaTitle: 'Radar Area Method',
                 areaDesc: 'Measures polygon area via shoelace formula. Rewards balanced capability profiles.',
                 insightLabel: 'Key Insight:',
@@ -681,21 +700,24 @@
                 keepOneTeam: 'At least one team required',
                 resetBtn: 'Reset',
                 resetConfirm: 'Reset to default? All custom teams will be cleared.',
-                dimLabels: ['Innovation', 'Market', 'Team', 'Commercial', 'Tech', 'Ambition']
+                tierTop: 'Upper · Future Vision',
+                tierMid: 'Mid · Execution',
+                tierBot: 'Lower · Team Power',
+                dimLabels: ['Mission & Vision', 'Innovation Foresight', 'Tech Moat', 'Execution', 'Team Synergy', 'Org Resilience']
             },
             zh: {
-                title: '中国好团队<br>六边形战力演算器',
-                subtitle: '四维评估体系：加权总分 | 雷达面积 | 平均分 | 均衡度',
+                title: '团队六边形战力演算器',
+                subtitle: '四种评估体系：加权总分 | 雷达面积 | 平均分 | 均衡度',
                 balanceNote: '📊 均衡度说明：将标准差转换为 0-100% 的均衡度分数。数值越高表示各维度越均衡，100% 为完美均衡。',
                 balanceFormula: '均衡度 = (1 - σ/σₘₐₓ) × 100%，其中 σ = √[Σ(xᵢ - μ)² / n]，σₘₐₓ = 50（理论最大标准差）',
                 weightedTitle: '加权总分计算法',
-                weightedDesc: '优先高权重维度。有利于技术实力和创新性强的团队。',
-                sTech: 'S级: 技术实力 2.0',
-                sInnovation: 'S级: 创新性 2.0',
-                aTeam: 'A级: 团队匹配度 1.5',
-                aAmbition: 'A级: 野心愿景 1.5',
-                bMarket: 'B级: 市场空间 1.0',
-                bCommercial: 'B级: 商业化现状 1.0',
+                weightedDesc: '优先高权重维度。有利于团队协同强、组织韧性高的团队。',
+                sMarket: 'S级: 团队协同 2.0',
+                sTeam: 'S级: 组织韧性 2.0',
+                aVision: 'A级: 技术壁垒 1.5',
+                aInnovation: 'A级: 执行落地 1.5',
+                bTech: 'B级: 使命愿景 1.0',
+                bCommercial: 'B级: 创新前瞻 1.0',
                 areaTitle: '雷达面积计算法',
                 areaDesc: '使用鞋带公式计算多边形面积。奖励能力均衡的团队。',
                 insightLabel: '关键洞察：',
@@ -727,7 +749,10 @@
                 keepOneTeam: '至少保留一个团队',
                 resetBtn: '重置',
                 resetConfirm: '确定要重置为默认数据吗？所有自定义团队将被清除。',
-                dimLabels: ['创新性', '市场空间', '团队匹配度', '商业化现状', '技术实力', '野心愿景']
+                tierTop: '上维 · 看未来',
+                tierMid: '中维 · 看落地',
+                tierBot: '下维 · 看团队',
+                dimLabels: ['使命愿景', '创新前瞻', '技术壁垒', '执行落地', '团队协同', '组织韧性']
             }
         };
 
@@ -757,10 +782,19 @@
             return translations[currentLang][key] || key;
         }
 
-        const dimensions = ['Innovation', 'Market', 'Team', 'Commercial', 'Tech', 'Ambition'];
-        const weights = [2.0, 1.0, 1.5, 1.0, 2.0, 1.5];
+        const dimensions = ['Mission', 'Innovation', 'TechMoat', 'Execution', 'TeamSync', 'OrgRes'];
+        const weights = [1.0, 1.0, 1.5, 1.5, 2.0, 2.0];
         const totalWeight = 9.0;
         const weightLabels = {2.0: 'S', 1.5: 'A', 1.0: 'B'};
+
+        // 三层维度定义（对应雷达图顺序）
+        const tierDefs = [
+            { key: 'tierTop', dims: [0, 1], color: 'var(--bauhaus-blue)' },
+            { key: 'tierMid', dims: [4, 5], color: 'var(--bauhaus-red)' },
+            { key: 'tierBot', dims: [2, 3], color: 'var(--bauhaus-green)' }
+        ];
+        // 每个维度对应的颜色（用于雷达图标签着色）：上维蓝/下维绿/中维红
+        const dimColors = ['#0047AB', '#0047AB', '#2ECC71', '#2ECC71', '#E94B3C', '#E94B3C'];
 
         const colors = [
             { name: 'Red', bg: 'rgba(233, 75, 60, 0.15)', border: '#E94B3C', solid: '#E94B3C' },
@@ -799,10 +833,10 @@
             }
         }
 
-        // 默认数据
+        // 默认数据（维度顺序：使命愿景, 创新前瞻, 技术壁垒, 执行落地, 团队协同, 组织韧性）
         const defaultTeams = [
-            { id: 1, name: 'Team A (Mature Giant)', scores: [68.0, 98.5, 86.5, 95.0, 72.5, 84.0] },
-            { id: 2, name: 'Team B (Startup Geek)', scores: [94.5, 75.0, 88.0, 42.5, 96.0, 92.5] }
+            { id: 1, name: 'Team A (Mature Giant)', scores: [84.0, 98.5, 86.5, 68.0, 72.5, 95.0] },
+            { id: 2, name: 'Team B (Startup Geek)', scores: [92.5, 75.0, 88.0, 94.5, 96.0, 42.5] }
         ];
 
         // 加载数据（优先使用缓存）
@@ -979,7 +1013,7 @@
                             angleLines: { color: '#1A1A1A', lineWidth: 1 },
                             pointLabels: {
                                 font: { size: 12, family: 'Inter', weight: '700' },
-                                color: '#1A1A1A'
+                                color: dimColors
                             }
                         }
                     }
@@ -1053,21 +1087,22 @@
                         </div>
                     </div>
                     <div class="dimensions-panel">
-                        <div class="dim-grid">
-                            ${dimensions.map((dim, i) => {
-                                const wl = weightLabels[weights[i]];
-                                const wc = wl === 'S' ? 'var(--bauhaus-red)' : wl === 'A' ? 'var(--bauhaus-yellow)' : 'var(--bauhaus-gray)';
-                                return `
-                                <div class="dim-cell">
-                                    <span class="dim-label">${t('dimLabels')[i]}</span>
-                                    <span class="weight-indicator" style="background:${wc};color:${wl==='A'?'#1A1A1A':'white'};border:2px solid #1A1A1A">${wl}</span>
-                                    <input type="number" class="dim-input" min="0" max="100" step="0.5"
-                                           value="${r.team.scores[i]}"
-                                           onchange="updateScore(${r.team.id}, ${i}, this.value)">
-                                </div>
-                                `;
-                            }).join('')}
-                        </div>
+                        ${tierDefs.map(tier => `
+                            <div class="dim-grid-pair">
+                                ${tier.dims.map(i => {
+                                    const wl = weightLabels[weights[i]];
+                                    const wc = wl === 'S' ? 'var(--bauhaus-red)' : wl === 'A' ? 'var(--bauhaus-yellow)' : 'var(--bauhaus-gray)';
+                                    return `
+                                    <div class="dim-cell">
+                                        <span class="dim-label">${t('dimLabels')[i]}</span>
+                                        <span class="weight-indicator" style="background:${wc};color:${wl==='A'?'#1A1A1A':'white'};border:2px solid #1A1A1A">${wl}</span>
+                                        <input type="number" class="dim-input" min="0" max="100" step="0.5"
+                                               value="${r.team.scores[i]}"
+                                               onchange="updateScore(${r.team.id}, ${i}, this.value)">
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                        `).join('')}
                     </div>
                     <div class="team-actions">
                         <div class="extremes">
@@ -1199,7 +1234,7 @@
                             angleLines: { color: '#1A1A1A', lineWidth: 1 },
                             pointLabels: {
                                 font: { size: 15, family: 'Inter', weight: '700' },
-                                color: '#1A1A1A'
+                                color: dimColors
                             }
                         }
                     }
