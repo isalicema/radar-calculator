@@ -6,6 +6,8 @@
 
 🔗 [https://isalicema.github.io/radar-calculator/](https://isalicema.github.io/radar-calculator/)
 
+![预览截图](preview.png)
+
 ## ✨ 功能特性
 
 ### 四种评估体系
